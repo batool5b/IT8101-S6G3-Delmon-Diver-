@@ -1,168 +1,156 @@
 using UnityEngine;
 
 /// <summary>
-/// EnvironmentDetector
-/// Detects what environment the player is currently in by using
-/// trigger colliders and a ground raycast.
+/// Detects whether the player is on land, in water, at an edge, submerged,
+/// or swimming toward land. All results stored as public bools read by
+/// AnimatorManager and PlayerLocomotion every frame.
 ///
-/// ── SETUP ──────────────────────────────────────────────────────
-/// 1. Add this script to your Player GameObject.
-/// 2. In Unity: Edit → Project Settings → Tags and Layers → Layers
-///    Create a Layer called "Water" (e.g. Layer 4).
-/// 3. Select your Water GameObject and set its Layer to "Water".
-/// 4. Make sure the Water GameObject has a Collider with "Is Trigger" = true.
-/// 5. In this script’s Inspector, set waterLayerMask to the "Water" layer.
-/// 6. Set groundLayerMask to your ground layer.
-/// NOTE: No "Water" tag is needed. Detection is layer-based only.
-/// ─────────────────────────────────────────────────────────────────────
+/// Setup requirements:
+///   - Water mesh: Add Box Collider → Is Trigger = ON → Tag = "Water"
+///   - Ground mesh: Set Layer = "Ground" (set same layer in Inspector below)
 /// </summary>
 public class EnvironmentDetector : MonoBehaviour
 {
-    // ── Public flags read by PlayerLocomotion and AnimatorManager ─────
-    public bool isGrounded       { get; private set; }
-    public bool isInWater        { get; private set; }
-    public bool isSubmerged      { get; private set; }  // fully underwater
-    public bool isAtEdge         { get; private set; }  // about to run off a ledge
-    public bool isSwimmingToEdge { get; private set; }  // swimming toward land edge
+    [Header("Ground")]
+    public LayerMask groundLayer;           // set to "Ground" in Inspector
+    public float     groundCheckDistance = 0.25f;  // how far down to raycast
 
-    // ── Inspector settings ────────────────────────────────────────────
-    [Header("Ground Check")]
-    [Tooltip("Layers that count as ground. Set this to your Ground layer.")]
-    public LayerMask groundLayerMask = 1;  // default layer
+    [Header("Edge (land side)")]
+    // how far ahead of the player to look for a drop-off
+    public float edgeLookAhead = 0.7f;
 
-    [Tooltip("Raycast length downward to detect ground.")]
-    public float groundCheckDistance = 0.5f;
+    [Header("Swimming To Edge (water side)")]
+    // how close to shore before Swimming To Edge animation plays
+    public float swimToEdgeDistance = 1.5f;
 
-    [Tooltip("Offset from pivot to start the ground ray (keeps it inside the collider).")]
-    public float groundCheckOriginY = 0.2f;
+    // ── PUBLIC FLAGS (read by other scripts every frame) ──────────────
+    [HideInInspector] public bool isInWater;        // inside water trigger
+    [HideInInspector] public bool isGrounded;       // feet touching ground
+    [HideInInspector] public bool isAtEdge;         // on land, cliff ahead
+    [HideInInspector] public bool isSubmerged;      // head below water surface
+    [HideInInspector] public bool isSwimmingToEdge; // in water, shore is close
 
-    [Header("Edge Detection")]
-    [Tooltip("How far forward to check for edge (no ground ahead).")]
-    public float edgeCheckDistance = 0.8f;
+    private float waterSurfaceY = float.MinValue;   // Y of water top surface
 
-    [Tooltip("How far down the edge forward ray goes.")]
-    public float edgeCheckDepth = 1.2f;
-
-    [Header("Water Detection")]
-    [Tooltip("Set this to the 'Water' layer in your project. NO tag needed.")]
-    public LayerMask waterLayerMask;
-
-    [Header("Submersion")]
-    [Tooltip("How far above the water surface the player must be to count as submerged.")]
-    public float submersionOffset = 0.5f;
-
-    // ── Private References ────────────────────────────────────────────
-    private PlayerManager _playerManager; // References the master manager class
-    private int waterTriggerCount = 0;   // counts overlapping water triggers
-    private float waterSurfaceY   = float.MinValue;
-
-    private void Awake()
+    // ── UPDATE: runs every frame ──────────────────────────────────────
+    private void Update()
     {
-        // Automatically find and cache the PlayerManager component on the player object
-        _playerManager = GetComponent<PlayerManager>();
+        CheckGround();       // is player standing on something?
+        CheckLandEdge();     // is there a drop-off ahead?
+        CheckSubmerged();    // is head below water?
+        CheckSwimmingToEdge(); // is shore close ahead?
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    private void FixedUpdate()
+    // ── WATER TRIGGER: Unity calls these automatically ────────────────
+
+    // Fires when player's collider overlaps the water trigger collider
+    private void OnTriggerEnter(Collider other)
     {
-        CheckGround();
-        CheckEdge();
-        CheckSubmerged();
-        CheckSwimmingToEdge();
+        HandleWaterOverlap(other);
     }
 
-    // ── Ground ────────────────────────────────────────────────────────
+    private void OnTriggerStay(Collider other)
+    {
+        if (!isInWater) HandleWaterOverlap(other);
+    }
+
+    private void HandleWaterOverlap(Collider other)
+    {
+        if (!other.CompareTag("Water")) return;
+        if (!isInWater) Debug.Log($"[EnvironmentDetector] Entered water: {other.name}");
+        isInWater     = true;
+        // Record where the water surface is (top of water collider)
+        waterSurfaceY = other.bounds.max.y;
+    }
+
+    // Fires when player's collider leaves the water trigger collider
+    private void OnTriggerExit(Collider other)
+    {
+        if (!other.CompareTag("Water")) return;
+        Debug.Log($"[EnvironmentDetector] Exited water: {other.name}");
+        isInWater        = false;
+        isSubmerged      = false;
+        isSwimmingToEdge = false;
+        waterSurfaceY    = float.MinValue;
+    }
+
+    // ── GROUND CHECK ─────────────────────────────────────────────────
+    // Shoots a short ray downward from just above the player's feet
+    // If it hits anything on the "Ground" layer → isGrounded = true
     private void CheckGround()
     {
-        Vector3 origin = transform.position + Vector3.up * groundCheckOriginY;
-        isGrounded = Physics.Raycast(origin, Vector3.down,
-                                     groundCheckDistance + groundCheckOriginY,
-                                     groundLayerMask);
+        isGrounded = Physics.Raycast(
+            transform.position + Vector3.up * 0.1f,  // start slightly above feet
+            Vector3.down,                              // direction: straight down
+            groundCheckDistance + 0.1f,               // max distance
+            groundLayer);                             // only hits "Ground" layer
     }
 
-    // ── Edge: ground exists under player but NOT one step ahead ───────
-    private void CheckEdge()
+    // ── EDGE CHECK (land side) ────────────────────────────────────────
+    // Shoots a ray downward a short distance AHEAD of the player
+    // If no ground is found ahead → player is at a cliff/edge
+    private void CheckLandEdge()
     {
-        if (!isGrounded) { isAtEdge = false; return; }
+        if (isInWater) { isAtEdge = false; return; }
 
-        Vector3 forwardOrigin = transform.position
-                              + transform.forward * edgeCheckDistance
-                              + Vector3.up * groundCheckOriginY;
+        // Point ahead of player, slightly elevated
+        Vector3 ahead    = transform.position
+                         + transform.forward * edgeLookAhead
+                         + Vector3.up * 0.1f;
 
-        bool groundAhead = Physics.Raycast(forwardOrigin, Vector3.down,
-                                           edgeCheckDepth, groundLayerMask);
-        isAtEdge = !groundAhead;
+        bool groundAhead = Physics.Raycast(ahead, Vector3.down, 1.5f, groundLayer);
+
+        // Edge = standing on ground AND no ground directly ahead
+        isAtEdge = isGrounded && !groundAhead;
     }
 
-    // ── Submerged: player Y is below water surface ────────────────────
+    // ── SUBMERGED CHECK ───────────────────────────────────────────────
+    // Player is submerged if their head (1.8m above feet) is below water
     private void CheckSubmerged()
     {
         if (!isInWater) { isSubmerged = false; return; }
-        isSubmerged = transform.position.y < (waterSurfaceY - submersionOffset);
+        float headY = transform.position.y + 1.8f;
+        isSubmerged = headY < waterSurfaceY;
     }
 
-    // ── Swimming toward edge: in water but ground very close ahead ────
+    // ── SWIMMING TO EDGE CHECK (water side) ───────────────────────────
+    // While in water, shoots a horizontal ray forward at water surface level
+    // If it hits land → player is approaching shore → play Swimming To Edge
     private void CheckSwimmingToEdge()
     {
         if (!isInWater) { isSwimmingToEdge = false; return; }
 
-        Vector3 forwardOrigin = transform.position
-                              + transform.forward * (edgeCheckDistance * 0.5f)
-                              + Vector3.up * groundCheckOriginY;
+        // Origin: at water surface, slightly in front of player
+        Vector3 origin = new Vector3(
+            transform.position.x,
+            waterSurfaceY - 0.1f,   // just below surface
+            transform.position.z)
+            + transform.forward * 0.3f;
 
-        isSwimmingToEdge = Physics.Raycast(forwardOrigin, Vector3.down,
-                                           edgeCheckDepth * 2f, groundLayerMask);
+        // If there's land directly ahead within swimToEdgeDistance → approaching shore
+        isSwimmingToEdge = Physics.Raycast(
+            origin, transform.forward, swimToEdgeDistance, groundLayer);
     }
 
-    // ── Water trigger enter/exit ──────────────────────────────────────
-    private void OnTriggerEnter(Collider other)
-    {
-        // Skip colliders that belong to the player itself (tools, weapons, etc.)
-        if (other.transform.IsChildOf(transform.root)) return;
-        if (other.gameObject.name.Contains("Tool") || other.gameObject.name.Contains("Weapon")) return;
-
-        if (IsWater(other))
-        {
-            waterTriggerCount++;                    // ← was missing: keep count in sync
-            isInWater  = true;
-            isGrounded = false;
-            waterSurfaceY = other.bounds.max.y;    // record surface height on enter
-        }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (!IsWater(other)) return;
-
-        waterTriggerCount = Mathf.Max(0, waterTriggerCount - 1);
-        if (waterTriggerCount == 0)
-        {
-            isInWater        = false;
-            isSubmerged      = false;
-            isSwimmingToEdge = false;
-            waterSurfaceY    = float.MinValue;
-        }
-    }
-
-    // ── Water detection ───────────────────────────────────────────────
-    // Uses LayerMask ONLY — no CompareTag, so no "Water" tag needed.
-    // Just set waterLayerMask in the Inspector to the Water layer.
-    private bool IsWater(Collider col)
-    {
-        return ((waterLayerMask.value & (1 << col.gameObject.layer)) != 0);
-    }
-
-    // ── Debug gizmos (visible in Scene view) ─────────────────────────
+    // ── GIZMOS: visible in Scene view when object is selected ─────────
+    // Green/Red line = ground check ray
+    // Yellow/White lines = edge check ray
+    // Cyan/Blue line = swim-to-edge check ray
     private void OnDrawGizmosSelected()
     {
-        // Ground check ray — green=hit, red=miss
         Gizmos.color = isGrounded ? Color.green : Color.red;
-        Vector3 origin = transform.position + Vector3.up * groundCheckOriginY;
-        Gizmos.DrawLine(origin, origin + Vector3.down * (groundCheckDistance + groundCheckOriginY));
+        Gizmos.DrawLine(
+            transform.position + Vector3.up * 0.1f,
+            transform.position - Vector3.up * groundCheckDistance);
 
-        // Edge check ray — yellow
-        Gizmos.color = Color.yellow;
-        Vector3 fwd = transform.position + transform.forward * edgeCheckDistance + Vector3.up * groundCheckOriginY;
-        Gizmos.DrawLine(fwd, fwd + Vector3.down * edgeCheckDepth);
+        Gizmos.color = isAtEdge ? Color.yellow : Color.white;
+        Vector3 ahead = transform.position + transform.forward * edgeLookAhead + Vector3.up * 0.1f;
+        Gizmos.DrawLine(ahead, ahead - Vector3.up * 1.5f);
+
+        Gizmos.color = isSwimmingToEdge ? Color.cyan : Color.blue;
+        Vector3 swimOrigin = new Vector3(
+            transform.position.x, waterSurfaceY - 0.1f, transform.position.z)
+            + transform.forward * 0.3f;
+        Gizmos.DrawLine(swimOrigin, swimOrigin + transform.forward * swimToEdgeDistance);
     }
 }

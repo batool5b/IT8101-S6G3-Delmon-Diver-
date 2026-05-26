@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
 using System.Collections.Generic;
 
 public class Level1SequenceManager : MonoBehaviour
@@ -10,7 +10,7 @@ public class Level1SequenceManager : MonoBehaviour
     public bool reachedSurface = false;
 
     [Header("UI References")]
-    public Text objectiveText;
+    public TextMeshProUGUI objectiveText;
     public GameObject winPanel;
     public GameObject losePanel;
 

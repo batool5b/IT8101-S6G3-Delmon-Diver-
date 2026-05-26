@@ -1,141 +1,75 @@
 using UnityEngine;
 
 /// <summary>
-/// Controls all Animator parameters and triggers.
-/// Other scripts should NEVER talk directly to the Animator.
-/// They should only call functions in this class.
+/// Drives the Animator Controller parameters every frame.
+/// The Animator Controller reads these parameters and decides
+/// which animation clip to play based on the transitions you set up.
 /// </summary>
 public class AnimatorManager : MonoBehaviour
 {
     private Animator animator;  // Unity's built-in Animator component
 
-    private static readonly int IsSwimmingToEdgeHash =
-        Animator.StringToHash("IsSwimmingToEdge");
-
-    private static readonly int DiveTriggerHash =
-        Animator.StringToHash("Dive");
-
-    private static readonly int PunchTriggerHash =
-        Animator.StringToHash("Punch");
-    
-    private static readonly int ThrowCreatureHash = 
-        Animator.StringToHash("ThrowCreature");
-    
-    private static readonly int JumpTriggerHash      = 
-        Animator.StringToHash("Jump");
-    
-    private static readonly int IsJumpingHash  =
-        Animator.StringToHash("IsJumping");
-
-    private static readonly int MoveSpeedHash = 
-        Animator.StringToHash("MoveSpeed");
-
-    private static readonly int IsInWaterHash = 
-        Animator.StringToHash("IsInWater");
-
-    private static readonly int IsSubmergedHash = 
-        Animator.StringToHash("IsSubmerged");
-
-    private static readonly int IsAtEdgeHash = 
-        Animator.StringToHash("IsAtEdge");
-
-    private static readonly int IsGroundedHash = 
-        Animator.StringToHash("IsGrounded");
-    // ─────────────────────────────────────────────────────────────
+    // StringToHash converts a string name to an integer ID
+    // This is faster than passing strings every frame
+    // These names must EXACTLY match what you typed in the Animator Controller Parameters panel
+    private static readonly int MoveSpeedHash        = Animator.StringToHash("MoveSpeed");
+    private static readonly int IsInWaterHash        = Animator.StringToHash("IsInWater");
+    private static readonly int IsSubmergedHash      = Animator.StringToHash("IsSubmerged");
+    private static readonly int IsAtEdgeHash         = Animator.StringToHash("IsAtEdge");
+    private static readonly int IsGroundedHash       = Animator.StringToHash("IsGrounded");
+    private static readonly int IsSwimmingToEdgeHash = Animator.StringToHash("IsSwimmingToEdge");
+    private static readonly int DiveTriggerHash      = Animator.StringToHash("Dive");
+    private static readonly int ThrowCreatureHash    = Animator.StringToHash("ThrowCreature");
 
     private void Awake()
-    {
+{
         animator = GetComponent<Animator>();
         if (animator == null)
-        {
-            Debug.LogError(
-                "AnimatorManager: No Animator found on " + gameObject.name);
-        }
+            Debug.LogError("AnimatorManager: No Animator component found on " + gameObject.name);
     }
-
-    // ─────────────────────────────────────────────────────────────
-    // MOVEMENT / STATE UPDATES
-    // Called every frame from PlayerManager
-    // ─────────────────────────────────────────────────────────────
-
-    public void UpdateAnimations(
-        float moveAmount,
-        EnvironmentDetector env)
-    {
-        if (animator == null || env == null)
-            return;
-
-        // Smooth movement blending
-        float current =
-            animator.GetFloat(MoveSpeedHash);
-
-        float smoothed =
-            Mathf.Lerp(
-                current,
-                moveAmount,
-                Time.deltaTime * 10f);
-
-        animator.SetFloat(MoveSpeedHash, smoothed);
-
-        // Environment states
-        animator.SetBool(IsInWaterHash, env.isInWater);
-        animator.SetBool(IsSubmergedHash, env.isSubmerged);
-        animator.SetBool(IsAtEdgeHash, env.isAtEdge);
-        animator.SetBool(IsGroundedHash, env.isGrounded);
-        animator.SetBool(
-            IsSwimmingToEdgeHash,
-            env.isSwimmingToEdge);
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // TRIGGERS
-    // ─────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Trigger dive animation.
-    /// Called when running off edge into water.
+    /// Called every frame from PlayerManager.
+    /// moveAmount: 0 = idle, 0.5 = walk/swim, 1 = run/swimfast
+    /// env: all the detection flags from EnvironmentDetector
+    /// </summary>
+    public void UpdateAnimations(float moveAmount, EnvironmentDetector env)
+    {
+        if (env == null) return;
+
+        // Mathf.Lerp smoothly blends from current value toward target
+        // Time.deltaTime * 10f means "reach target in about 0.1 seconds"
+        // This prevents jarring instant switches between idle/walk/run
+        float current  = animator.GetFloat(MoveSpeedHash);
+        float smoothed = Mathf.Lerp(current, moveAmount, Time.deltaTime * 10f);
+        animator.SetFloat(MoveSpeedHash, smoothed);
+
+        // Booleans are set directly — no smoothing needed
+        // The Animator Controller transitions use these to decide state changes:
+        //   IsInWater=true  → switch to Swim states
+        //   IsAtEdge=true   → trigger edge/dive behaviour
+        //   IsGrounded=true → allow jump, exit water states
+        animator.SetBool(IsInWaterHash,        env.isInWater);
+        animator.SetBool(IsSubmergedHash,      env.isSubmerged);
+        animator.SetBool(IsAtEdgeHash,         env.isAtEdge);
+        animator.SetBool(IsGroundedHash,       env.isGrounded);
+        animator.SetBool(IsSwimmingToEdgeHash, env.isSwimmingToEdge);
+    }
+
+    /// <summary>
+    /// Called ONCE from PlayerLocomotion when player runs off edge.
+    /// Triggers are consumed immediately by the Animator (fire-and-forget).
     /// </summary>
     public void TriggerDive()
     {
-        if (animator == null)
-            return;
-
         animator.SetTrigger(DiveTriggerHash);
     }
 
-
-    public void TriggerPunch()
-    {
-        Debug.Log("Punch triggered");
-        if (animator == null)
-            return;
-
-        animator.SetTrigger(PunchTriggerHash);
-    }
-
+    /// <summary>
+    /// Called from BoatAttack when player throws a creature.
+    /// </summary>
     public void TriggerThrowCreature()
     {
         animator.SetTrigger(ThrowCreatureHash);
-    }
-
-    /// <summary>
-    /// Called from PlayerLocomotion when the player jumps on land.
-    /// Fires the "Jump" trigger and sets "IsJumping" bool.
-    /// </summary>
-    public void TriggerJump()
-    {
-        animator.SetTrigger(JumpTriggerHash);
-        animator.SetBool(IsJumpingHash, true);
-    }
-
-    /// <summary>
-    /// Called when the player lands on the ground to exit jump animation.
-    /// </summary>
-    public void SetGrounded(bool grounded)
-    {
-        if (grounded)
-        {
-            animator.SetBool(IsJumpingHash, false);
-        }
     }
 }

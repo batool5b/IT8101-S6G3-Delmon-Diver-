@@ -27,6 +27,12 @@ public class PlayerOxygen : MonoBehaviour
         currentOxygen = maxOxygen;
     }
 
+    private void Start()
+    {
+        float percent = Mathf.Clamp01(currentOxygen / maxOxygen);
+        OnOxygenChanged?.Invoke(percent);
+    }
+
     private void Update()
     {
         if (isDead) return;
@@ -47,7 +53,8 @@ public class PlayerOxygen : MonoBehaviour
             HandleDrowning();
         }
         
-        OnOxygenChanged?.Invoke(currentOxygen / maxOxygen);
+        float percent = Mathf.Clamp01(currentOxygen / maxOxygen);
+        OnOxygenChanged?.Invoke(percent);
     }
 
     private void DepleteOxygen()
@@ -69,9 +76,9 @@ public class PlayerOxygen : MonoBehaviour
             Debug.Log("Player is drowning!");
             nextDamageTime = Time.time + damageInterval;
             
-            // For now, if oxygen is 0, we can just trigger "OnDrowned" if we want a game over
-            // Or implement a health system. Let's start with a simple Game Over if oxygen hits 0 for too long.
-            // If we have a Health system, we would do: health.TakeDamage(drowningDamage);
+            // For now, let's just die immediately when oxygen is empty for simplicity
+            // or we could reduce health. Since there's no health system yet:
+            Die();
         }
     }
     

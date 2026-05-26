@@ -1,94 +1,49 @@
 using UnityEngine;
 
 /// <summary>
-/// Master controller. Checks InventoryManager.IsOpen to block movement while
-/// the inventory panel is visible.
-/// When inventory is open:
-///   - Input reading stops (player can't accidentally move)
-///   - Rigidbody velocity is zeroed
-///   - Animation is set to idle (moveAmount=0) so character doesn't freeze mid-run
-///   - Physics is skipped
+/// The master controller. Calls the other scripts in the correct order
+/// every frame. This is the only script that has Update/FixedUpdate.
+///
+/// Order matters:
+///   Update      → read input first, then update animations (visual)
+///   FixedUpdate → move the Rigidbody (physics runs at fixed timestep)
 /// </summary>
 public class PlayerManager : MonoBehaviour
 {
-    private InputManagement     inputManager;
-    private PlayerLocomotion    playerLocomotion;
-    private AnimatorManager     animatorManager;
-    private EnvironmentDetector env;
-    private Rigidbody           rb;
-
-    private InventoryManager inventoryManager;
+    private InputManagement     inputManager;     // reads keyboard/gamepad
+    private PlayerLocomotion    playerLocomotion; // moves the Rigidbody
+    private AnimatorManager     animatorManager;  // drives the Animator
+    private EnvironmentDetector env;              // detects land/water/edge
 
     private void Awake()
     {
+        // GetComponent finds each script on this same GameObject
         inputManager     = GetComponent<InputManagement>();
         playerLocomotion = GetComponent<PlayerLocomotion>();
         animatorManager  = GetComponent<AnimatorManager>();
         env              = GetComponent<EnvironmentDetector>();
-        rb               = GetComponent<Rigidbody>();
-        inventoryManager = GetComponent<InventoryManager>();
-        if (inventoryManager == null)
-            inventoryManager = FindFirstObjectByType<InventoryManager>();
 
         if (inputManager     == null) Debug.LogError("Missing InputManagement!");
         if (playerLocomotion == null) Debug.LogError("Missing PlayerLocomotion!");
         if (animatorManager  == null) Debug.LogError("Missing AnimatorManager!");
         if (env              == null) Debug.LogError("Missing EnvironmentDetector!");
-        if (inventoryManager == null) Debug.LogWarning("[PlayerManager] InventoryManager not found — movement will never be blocked.");
     }
 
+    // Update runs every frame (60fps+)
     private void Update()
     {
-        // Always handle inputs so that toggle flags (Inventory, Chat) are updated correctly.
-        if (inputManager != null)
-            inputManager.HandleAllInputs();
+        // 1. Read input first so other systems have fresh data
+        inputManager.HandleAllInputs();
 
-        bool isUIVisible = UIManager.Instance != null && UIManager.Instance.IsAnyUIVisible();
-
-        if (isUIVisible)
-        {
-            // Drive animator to idle if UI is visible
-            if (animatorManager != null && env != null)
-                animatorManager.UpdateAnimations(0f, env);
-            return;
-        }
-
-        if (env != null && animatorManager != null)
+        // 2. Push data to Animator so animation matches movement
+        if (env != null)
             animatorManager.UpdateAnimations(inputManager.moveAmount, env);
     }
 
+    // FixedUpdate runs at fixed intervals (default 50/sec, set in Project Settings)
+    // Always move Rigidbodies here — never in Update — for smooth physics
     private void FixedUpdate()
     {
-        // Always call HandleAllMovement; it now internally checks UIManager.IsAnyUIVisible
-        // to restrict input while preserving gravity/physics.
-        if (playerLocomotion != null)
-            playerLocomotion.HandleAllMovement();
+        playerLocomotion.HandleAllMovement();
     }
-
-    private bool CanMove()
-    {
-        if (inventoryManager == null) return true;
-        return !inventoryManager.IsOpen;
-    }
-
-    // Call this function whenever the player selects or picks up a tool
-public void EquipTool(GameObject toolPrefab, Transform handSlot)
-{
-    // 1. Spawn the tool at the player's hand position
-    GameObject equippedTool = Instantiate(toolPrefab, handSlot.position, handSlot.rotation);
-    equippedTool.transform.SetParent(handSlot);
-
-    // 2. Clear out any physical colliders so it doesn't crash your EnvironmentDetector
-    if (equippedTool.TryGetComponent<Collider>(out Collider toolCollider))
-    {
-        toolCollider.enabled = false; 
-    }
-
-    // 3. Make sure any child objects of the tool also lose their colliders
-    Collider[] childColliders = equippedTool.GetComponentsInChildren<Collider>();
-    foreach (Collider childCol in childColliders)
-    {
-        childCol.enabled = false;
-    }
-}
 }
