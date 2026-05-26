@@ -3636,7 +3636,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2293aac2f846974c8eafeb27b9d47eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  player: {fileID: 0}
+  player: {fileID: 422801031}
   chatRange: 3
   chatUI: {fileID: 1285983747}
 --- !u!114 &1088767626
@@ -3651,7 +3651,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be62a4debea35eb4d81e1ed03b6b5b68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  player: {fileID: 0}
+  player: {fileID: 422801031}
   followOffset: {x: 1.5, y: 2, z: 0}
   followSpeed: 3
   catchUpSpeed: 7
@@ -3671,7 +3671,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 899ec2d883eb9414aadcff8940d9ef7b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  player: {fileID: 0}
+  player: {fileID: 422801031}
   minFactTime: 15
   maxFactTime: 40
   messageDuration: 15
