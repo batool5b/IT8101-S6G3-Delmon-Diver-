@@ -1,0 +1,143 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &1649266338199612957
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1608.3716
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 533.69446
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      propertyPath: m_Name
+      value: Jackal
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2584983761835429811}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3284987357638521627}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 115090388832862862}
+  m_SourcePrefab: {fileID: 100100000, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+--- !u!1 &1883128268935697228 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: c161db6f9de5623408beaad7988b8df1, type: 3}
+  m_PrefabInstance: {fileID: 1649266338199612957}
+  m_PrefabAsset: {fileID: 0}
+--- !u!143 &2584983761835429811
+CharacterController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1883128268935697228}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Height: 2
+  m_Radius: 0.5
+  m_SlopeLimit: 45
+  m_StepOffset: 0.3
+  m_SkinWidth: 0.08
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &3284987357638521627
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1883128268935697228}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7568c5402a4f374e94b195c21b4f53a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  animalName: Jackal
+  animalPrefix: Land Creature
+  maxHealth: 10
+  currentHealth: 0
+  meatItem: {fileID: 11400000, guid: eecf13eb69d977849b69624aaeec3375, type: 2}
+  meatAmount: 2
+  instantHealAmount: 0
+  questId: 
+  questProgressAmount: 1
+  hitSound: {fileID: 0}
+  deathSound: {fileID: 0}
+  flashColor: {r: 1, g: 0, b: 0, a: 1}
+  flashDuration: 0.15
+  healthBarPrefab: {fileID: 0}
+  healthBarOffset: {x: 0, y: 2, z: 0}
+--- !u!114 &115090388832862862
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1883128268935697228}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d424afebb6da4f740917ee25872ab92b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  behavior: 0
+  detectionRange: 10
+  attackRange: 2
+  moveSpeed: 3
+  damagePerSecond: 10
+  attackSound: {fileID: 0}
